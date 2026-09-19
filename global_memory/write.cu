@@ -89,6 +89,21 @@ void print_bandwidth(std::vector<float> bandwidth)
     std::cout << "mean :" << std::setw(10) << bandwidth[2] << " min :" << std::setw(10) << bandwidth[0] << " max: " << std::setw(10) << bandwidth[1] << std::endl;
 }
 
+void l2cache_flush()
+{
+
+    cudaDeviceProp prop;
+    int device = 0;
+    CUDA_CHECK(cudaGetDeviceProperties(&prop, device));
+    size_t l2cache_bytes = prop.l2CacheSize;
+    char *l2cache = nullptr;
+    CUDA_CHECK(cudaMalloc(&l2cache, l2cache_bytes));
+
+    CUDA_CHECK(cudaMemset(l2cache, 0, l2cache_bytes));
+    CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaFree(l2cache));
+}
+
 int main()
 {
     int device = 0;
@@ -185,6 +200,7 @@ int main()
         cudaEventCreate(&stop);
         for (int i = 0; i < iters; i++)
         {
+            l2cache_flush();
             cudaEventRecord(start);
             if (write_mode == WRITE_MODE::INT)
             {
