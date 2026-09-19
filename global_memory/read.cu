@@ -94,6 +94,21 @@ void print_bandwidth(std::vector<float> bandwidth)
     std::cout << "mean :" << std::setw(10) << bandwidth[2] << " min :" << std::setw(10) << bandwidth[0] << " max: " << std::setw(10) << bandwidth[1] << std::endl;
 }
 
+void l2cache_flush()
+{
+
+    cudaDeviceProp prop;
+    int device = 0;
+    CUDA_CHECK(cudaGetDeviceProperties(&prop, device));
+    size_t l2cache_bytes = prop.l2CacheSize;
+    char *l2cache = nullptr;
+    CUDA_CHECK(cudaMalloc(&l2cache, l2cache_bytes));
+
+    CUDA_CHECK(cudaMemset(l2cache, 0, l2cache_bytes));
+    CUDA_CHECK(cudaDeviceSynchronize());
+    CUDA_CHECK(cudaFree(l2cache));
+}
+
 int main()
 {
     int device = 0;
@@ -106,6 +121,10 @@ int main()
 
     int num_sm = prop.multiProcessorCount;
     std::cout << "device number of sm: " << num_sm << std::endl;
+    std::cout << "GPU: " << prop.name << std::endl;
+    std::cout << "L2 cache: "
+              << prop.l2CacheSize / 1024.0 / 1024.0
+              << " MB" << std::endl;
 
     // 4 cta per sm
     int num_cta = num_sm * 4;
@@ -139,7 +158,7 @@ int main()
             count *= 4 * 4;
         }
         size_t src_bytes;
-        size_t out_bytes = num_thread * sizeof(unsigned int);
+        size_t out_bytes = num_cta * num_thread * sizeof(unsigned int);
         void *src = nullptr;
         if (read_mode == READ_MODE::INT)
         {
@@ -194,6 +213,7 @@ int main()
         cudaEventCreate(&stop);
         for (int i = 0; i < iters; i++)
         {
+            l2cache_flush();
             cudaEventRecord(start);
             if (read_mode == READ_MODE::INT)
             {
@@ -220,5 +240,8 @@ int main()
         auto res = summarize<float>(bandwidth);
         std::cout << "read " << std::setw(10) << src_bytes * 1.0 / 1e6 << " MB ";
         print_bandwidth(res);
+
+        CUDA_CHECK(cudaFree(src));
+        CUDA_CHECK(cudaFree(out));
     }
 }
