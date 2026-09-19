@@ -95,7 +95,7 @@ void l2cache_flush()
     cudaDeviceProp prop;
     int device = 0;
     CUDA_CHECK(cudaGetDeviceProperties(&prop, device));
-    size_t l2cache_bytes = prop.l2CacheSize;
+    size_t l2cache_bytes = prop.l2CacheSize * 2;
     char *l2cache = nullptr;
     CUDA_CHECK(cudaMalloc(&l2cache, l2cache_bytes));
 
@@ -118,7 +118,7 @@ int main()
     std::cout << "device number of sm: " << num_sm << std::endl;
 
     // 4 cta per sm
-    int num_cta = num_sm * 4;
+    int num_cta = num_sm * 16;
     int num_thread = 256;
 
     enum WRITE_MODE
@@ -128,7 +128,7 @@ int main()
         UINT2,
         UINT4
     };
-    WRITE_MODE write_mode = WRITE_MODE::UINT2;
+    WRITE_MODE write_mode = WRITE_MODE::UINT4;
     // element count
     std::vector<int> num_elements = {1 << 16, 1 << 17, 1 << 18, 1 << 19, 1 << 20, 1 << 21, 1 << 22, 1 << 23, 1 << 24, 1 << 25, 1 << 26};
     for (int k = 0; k < num_elements.size(); k++)
@@ -227,5 +227,7 @@ int main()
         auto res = summarize<float>(bandwidth);
         std::cout << "write " << std::setw(10) << src_bytes * 1.0 / 1e6 << " MB ";
         print_bandwidth(res);
+
+        CUDA_CHECK(cudaFree(src));
     }
 }

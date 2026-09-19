@@ -100,7 +100,7 @@ void l2cache_flush()
     cudaDeviceProp prop;
     int device = 0;
     CUDA_CHECK(cudaGetDeviceProperties(&prop, device));
-    size_t l2cache_bytes = prop.l2CacheSize;
+    size_t l2cache_bytes = prop.l2CacheSize * 2;
     char *l2cache = nullptr;
     CUDA_CHECK(cudaMalloc(&l2cache, l2cache_bytes));
 
@@ -127,7 +127,7 @@ int main()
               << " MB" << std::endl;
 
     // 4 cta per sm
-    int num_cta = num_sm * 4;
+    int num_cta = num_sm * 16;
     int num_thread = 256;
 
     enum READ_MODE
@@ -137,7 +137,7 @@ int main()
         UINT2,
         UINT4
     };
-    READ_MODE read_mode = READ_MODE::UINT2;
+    READ_MODE read_mode = READ_MODE::UINT4;
 
     // int read_mode = 1; // 0 is char, 1 is int, 2 is uint2, 3 is uint4
     // element count
